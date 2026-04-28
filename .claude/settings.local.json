@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm create *)",
+      "Bash(npm install *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm run *)",
+      "Bash(timeout 8 pnpm dev)",
+      "Bash(pnpm exec *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:bundlephobia.com)",
+      "Bash(pnpm remove *)",
+      "Skill(update-config)",
+      "Bash(bash -c ' *)",
+      "Bash(node *)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm approve-builds *)",
+      "Bash(pnpm db:generate)",
+      "Bash(pnpm db:migrate)"
+    ]
+  }
+}

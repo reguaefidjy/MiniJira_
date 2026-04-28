@@ -1,0 +1,402 @@
+database:
+  engine: SQLite
+  version: "3.x"
+  orm: Drizzle ORM
+  notes:
+    - "PRAGMA foreign_keys = ON debe ejecutarse al iniciar cada conexión"
+    - "UUIDs generados en aplicación, almacenados como TEXT"
+    - "Timestamps en formato ISO 8601 UTC, almacenados como TEXT"
+    - "Booleanos como INTEGER (0 = false, 1 = true)"
+    - "ENUMs como TEXT con CHECK constraints"
+
+tables:
+
+  # ─────────────────────────────────────────
+  # USUARIOS
+  # ─────────────────────────────────────────
+  users:
+    description: "Usuarios del sistema aprovisionados por un admin"
+    columns:
+      id:
+        type: TEXT
+        primary_key: true
+        notes: "UUID v4 generado en aplicación"
+      name:
+        type: TEXT
+        nullable: false
+      email:
+        type: TEXT
+        nullable: false
+        unique: true
+      role:
+        type: TEXT
+        nullable: false
+        check: "role IN ('admin', 'member')"
+      is_active:
+        type: INTEGER
+        nullable: false
+        default: 1
+        notes: "1 = activo, 0 = desactivado (soft delete)"
+      created_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+      updated_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+    indexes:
+      - columns: [email]
+        unique: true
+      - columns: [is_active]
+
+  # ─────────────────────────────────────────
+  # REFRESH TOKENS
+  # ─────────────────────────────────────────
+  refresh_tokens:
+    description: "Refresh tokens persistidos para poder invalidarlos en logout"
+    columns:
+      id:
+        type: TEXT
+        primary_key: true
+        notes: "UUID v4"
+      user_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: users
+          column: id
+          on_delete: CASCADE
+      token_hash:
+        type: TEXT
+        nullable: false
+        unique: true
+        notes: "Hash SHA-256 del token opaco; nunca se almacena el token en claro"
+      expires_at:
+        type: TEXT
+        nullable: false
+        notes: "ISO 8601; 7 días desde emisión"
+      created_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+    indexes:
+      - columns: [token_hash]
+        unique: true
+      - columns: [user_id]
+
+  # ─────────────────────────────────────────
+  # TICKETS
+  # ─────────────────────────────────────────
+  tickets:
+    description: "Tickets del tablero Kanban"
+    columns:
+      id:
+        type: TEXT
+        primary_key: true
+        notes: "UUID v4"
+      title:
+        type: TEXT
+        nullable: false
+        check: "length(title) <= 120"
+      description:
+        type: TEXT
+        nullable: true
+        notes: "Contenido en formato Markdown"
+      status:
+        type: TEXT
+        nullable: false
+        default: "'todo'"
+        check: "status IN ('todo', 'in_progress', 'review', 'done')"
+      priority:
+        type: TEXT
+        nullable: false
+        check: "priority IN ('low', 'medium', 'high')"
+      is_blocked:
+        type: INTEGER
+        nullable: false
+        default: 0
+        notes: "Flag lateral; coexiste con cualquier status"
+      version:
+        type: INTEGER
+        nullable: false
+        default: 1
+        notes: "Incrementa en cada UPDATE; usado para Optimistic Locking"
+      created_by:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: users
+          column: id
+          on_delete: RESTRICT
+      archived_at:
+        type: TEXT
+        nullable: true
+        notes: "NULL = activo; valor ISO 8601 = archivado (soft delete)"
+      created_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+      updated_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+    indexes:
+      - columns: [status]
+      - columns: [priority]
+      - columns: [created_by]
+      - columns: [archived_at]
+      - columns: [created_at]
+
+  # ─────────────────────────────────────────
+  # ASIGNADOS (many-to-many: tickets ↔ users)
+  # ─────────────────────────────────────────
+  ticket_assignees:
+    description: "Relación muchos-a-muchos entre tickets y usuarios asignados"
+    columns:
+      ticket_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: tickets
+          column: id
+          on_delete: CASCADE
+      user_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: users
+          column: id
+          on_delete: CASCADE
+    primary_key:
+      composite: [ticket_id, user_id]
+    indexes:
+      - columns: [user_id]
+
+  # ─────────────────────────────────────────
+  # CATÁLOGO DE ETIQUETAS
+  # ─────────────────────────────────────────
+  labels:
+    description: "Catálogo centralizado de etiquetas reutilizables entre tickets"
+    columns:
+      id:
+        type: TEXT
+        primary_key: true
+        notes: "UUID v4"
+      name:
+        type: TEXT
+        nullable: false
+        unique: true
+      color:
+        type: TEXT
+        nullable: false
+        notes: "Color hexadecimal libre, ej: #005bbf"
+      created_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+      updated_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+    indexes:
+      - columns: [name]
+        unique: true
+
+  # ─────────────────────────────────────────
+  # ETIQUETAS POR TICKET (many-to-many: tickets ↔ labels)
+  # ─────────────────────────────────────────
+  ticket_labels:
+    description: "Relación muchos-a-muchos entre tickets y etiquetas del catálogo"
+    columns:
+      ticket_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: tickets
+          column: id
+          on_delete: CASCADE
+      label_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: labels
+          column: id
+          on_delete: CASCADE
+    primary_key:
+      composite: [ticket_id, label_id]
+    indexes:
+      - columns: [label_id]
+
+  # ─────────────────────────────────────────
+  # COMENTARIOS
+  # ─────────────────────────────────────────
+  comments:
+    description: "Comentarios de texto plano asociados a tickets"
+    columns:
+      id:
+        type: TEXT
+        primary_key: true
+        notes: "UUID v4"
+      ticket_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: tickets
+          column: id
+          on_delete: CASCADE
+      author_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: users
+          column: id
+          on_delete: RESTRICT
+      body:
+        type: TEXT
+        nullable: false
+        notes: "Texto plano; puede incluir menciones @handle"
+      archived_at:
+        type: TEXT
+        nullable: true
+        notes: "NULL = activo; valor ISO 8601 = archivado (soft delete)"
+      created_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+    indexes:
+      - columns: [ticket_id]
+      - columns: [author_id]
+      - columns: [archived_at]
+
+  # ─────────────────────────────────────────
+  # COLA DE NOTIFICACIONES
+  # ─────────────────────────────────────────
+  notification_queue:
+    description: >
+      Jobs de notificación por email. El worker verifica que el comentario
+      origen siga activo antes de llamar a Resend. Máximo 3 reintentos,
+      5 minutos entre intentos.
+    columns:
+      id:
+        type: TEXT
+        primary_key: true
+        notes: "UUID v4"
+      recipient_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: users
+          column: id
+          on_delete: CASCADE
+      comment_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: comments
+          column: id
+          on_delete: CASCADE
+        notes: "El worker verifica archived_at en este comentario antes de enviar"
+      ticket_id:
+        type: TEXT
+        nullable: false
+        foreign_key:
+          table: tickets
+          column: id
+          on_delete: CASCADE
+      event_type:
+        type: TEXT
+        nullable: false
+        check: "event_type IN ('comment_added', 'mention', 'ticket_assigned')"
+      status:
+        type: TEXT
+        nullable: false
+        default: "'pending'"
+        check: "status IN ('pending', 'processing', 'sent', 'failed')"
+      attempts:
+        type: INTEGER
+        nullable: false
+        default: 0
+        notes: "Número de intentos realizados; máximo 3"
+      max_attempts:
+        type: INTEGER
+        nullable: false
+        default: 3
+      next_attempt_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+        notes: "El worker procesa solo jobs donde next_attempt_at <= NOW()"
+      last_error:
+        type: TEXT
+        nullable: true
+        notes: "Mensaje del último error de Resend; útil para debugging"
+      created_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+      updated_at:
+        type: TEXT
+        nullable: false
+        default: "CURRENT_TIMESTAMP"
+    indexes:
+      - columns: [status, next_attempt_at]
+        notes: "Índice compuesto principal para el worker"
+      - columns: [recipient_id]
+      - columns: [comment_id]
+
+relationships:
+  - from: refresh_tokens.user_id
+    to: users.id
+    type: many-to-one
+    on_delete: CASCADE
+
+  - from: tickets.created_by
+    to: users.id
+    type: many-to-one
+    on_delete: RESTRICT
+
+  - from: ticket_assignees.ticket_id
+    to: tickets.id
+    type: many-to-one
+    on_delete: CASCADE
+
+  - from: ticket_assignees.user_id
+    to: users.id
+    type: many-to-one
+    on_delete: CASCADE
+
+  - from: ticket_labels.ticket_id
+    to: tickets.id
+    type: many-to-one
+    on_delete: CASCADE
+
+  - from: ticket_labels.label_id
+    to: labels.id
+    type: many-to-one
+    on_delete: CASCADE
+
+  - from: comments.ticket_id
+    to: tickets.id
+    type: many-to-one
+    on_delete: CASCADE
+
+  - from: comments.author_id
+    to: users.id
+    type: many-to-one
+    on_delete: RESTRICT
+
+  - from: notification_queue.recipient_id
+    to: users.id
+    type: many-to-one
+    on_delete: CASCADE
+
+  - from: notification_queue.comment_id
+    to: comments.id
+    type: many-to-one
+    on_delete: CASCADE
+
+  - from: notification_queue.ticket_id
+    to: tickets.id
+    type: many-to-one
+    on_delete: CASCADE

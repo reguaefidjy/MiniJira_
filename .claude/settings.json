@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ const j=JSON.parse(d); const cmd=j.tool_input&&j.tool_input.command||''; if(/rm\\s+(-\\S*r\\S*f|-\\S*f\\S*r|--no-preserve-root)/.test(cmd)){ process.stdout.write(JSON.stringify({continue:false,stopReason:'Bloqueado: rm -rf está prohibido en este proyecto.'})); } });\"",
+            "statusMessage": "Verificando seguridad del comando..."
+          }
+        ]
+      }
+    ]
+  }
+}
