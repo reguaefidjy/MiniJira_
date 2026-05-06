@@ -20,11 +20,15 @@ interface Props {
   status: TicketStatus
   tickets: Ticket[]
   onTicketClick: (id: string) => void
+  isDropDisabled?: boolean
 }
 
-export function KanbanColumn({ status, tickets, onTicketClick }: Props) {
+export function KanbanColumn({ status, tickets, onTicketClick, isDropDisabled = false }: Props) {
   return (
-    <div className="flex min-w-[280px] flex-1 flex-col rounded-xl bg-[#f2f4f6] p-3">
+    <div
+      className="flex min-w-[280px] flex-1 flex-col rounded-xl bg-[#f2f4f6] p-3 transition-opacity"
+      style={{ opacity: isDropDisabled ? 0.45 : 1 }}
+    >
       <div className="mb-3 flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           <span className={`h-2 w-2 rounded-full ${COLUMN_DOT[status]}`} />
@@ -49,7 +53,7 @@ export function KanbanColumn({ status, tickets, onTicketClick }: Props) {
         </div>
       </div>
 
-      <Droppable droppableId={status}>
+      <Droppable droppableId={status} isDropDisabled={isDropDisabled}>
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}

@@ -93,6 +93,7 @@ const NAV_ITEMS = [
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   const currentUser = useAppStore((s) => s.currentUser)
   const setCurrentUser = useAppStore((s) => s.setCurrentUser)
+  const setCreateModalOpen = useAppStore((s) => s.setCreateModalOpen)
 
   async function handleLogout() {
     await postLogout()
@@ -145,6 +146,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
         {/* Create Issue CTA */}
         <button
+          onClick={() => setCreateModalOpen(true)}
           className="flex w-full items-center justify-center gap-2 rounded-md py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
           style={{ background: 'linear-gradient(145deg, #005bbf, #0050a8)' }}
         >

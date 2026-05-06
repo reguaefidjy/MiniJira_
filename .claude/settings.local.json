@@ -26,7 +26,8 @@
       "Bash(chmod +x scripts/*.sh)",
       "Bash(bash scripts/seed.sh --dry-run)",
       "Bash(bash *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(pnpm tsc *)"
     ]
   }
 }

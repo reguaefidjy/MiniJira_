@@ -5,7 +5,7 @@ function buildTicketParams(filters: BoardFilters): string {
   filters.status.forEach((s) => params.append('status', s))
   filters.priority.forEach((p) => params.append('priority', p))
   if (filters.assignee_id) params.set('assignee_id', filters.assignee_id)
-  filters.labels.forEach((l) => params.append('label', l))
+  filters.labels.forEach((l) => params.append('label_id', l))
   if (filters.created_at_from) params.set('created_at_from', filters.created_at_from)
   if (filters.created_at_to) params.set('created_at_to', filters.created_at_to)
   return params.toString()
@@ -47,12 +47,16 @@ export async function updateTicket(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   })
-  if (res.status === 409) {
-    const error = new Error('Conflict') as Error & { status: number }
-    error.status = 409
+  if (!res.ok) {
+    const message =
+      res.status === 409 ? 'Conflict'
+      : res.status === 422 ? 'Transition not allowed'
+      : res.status === 403 ? 'Forbidden'
+      : 'Failed to update ticket'
+    const error = new Error(message) as Error & { status: number }
+    error.status = res.status
     throw error
   }
-  if (!res.ok) throw new Error('Failed to update ticket')
   return res.json()
 }
 

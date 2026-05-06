@@ -3,11 +3,12 @@ import { useAppStore } from '@/store/useAppStore'
 import { KanbanBoard } from '@/components/board/KanbanBoard'
 import { BoardHeader } from '@/components/board/BoardHeader'
 import { TicketDrawer } from '@/components/ticket/TicketDrawer'
+import { CreateTicketModal } from '@/components/ticket/CreateTicketModal'
 import { useEffect } from 'react'
 
 export function BoardPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const { activeTicketId, setActiveTicketId } = useAppStore()
+  const { activeTicketId, setActiveTicketId, createModalOpen, setCreateModalOpen } = useAppStore()
 
   // Sync URL param → store
   useEffect(() => {
@@ -33,6 +34,9 @@ export function BoardPage() {
         ticketId={activeTicketId}
         onClose={handleCloseDrawer}
       />
+      {createModalOpen && (
+        <CreateTicketModal onClose={() => setCreateModalOpen(false)} />
+      )}
     </div>
   )
 }
