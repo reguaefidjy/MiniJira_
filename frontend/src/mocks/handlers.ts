@@ -35,7 +35,7 @@ export const handlers = [
 
     const labels = url.searchParams.getAll('label')
     if (labels.length) {
-      tickets = tickets.filter((t) => labels.every((l) => t.labels.includes(l)))
+      tickets = tickets.filter((t) => labels.every((l) => t.labels.some((tl) => tl.name === l)))
     }
 
     return HttpResponse.json(tickets)
@@ -62,14 +62,14 @@ export const handlers = [
       is_blocked: false,
       version: 1,
       created_by: MOCK_USER_ID,
-      created_by_user: user,
+      creator: user,
       archived_at: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       assignees: db.users.filter((u) =>
         (body.assignees as unknown as string[] ?? []).includes(u.id),
       ),
-      labels: (body.labels as unknown as string[]) ?? [],
+      labels: [],
     }
     db.tickets.push(newTicket)
     return HttpResponse.json(newTicket, { status: 201 })
@@ -169,8 +169,8 @@ export const handlers = [
           t.status,
           t.priority,
           t.assignees.map((a) => a.name).join(';'),
-          t.labels.join(';'),
-          t.created_by_user.name,
+          t.labels.map((l) => l.name).join(';'),
+          t.creator.name,
           t.created_at,
           t.status === 'done' ? t.updated_at : '',
           t.archived_at ? 'true' : 'false',

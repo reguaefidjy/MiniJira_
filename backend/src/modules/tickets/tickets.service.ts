@@ -4,7 +4,7 @@ import { db } from '../../db';
 import {
   tickets, ticketAssignees, ticketLabels, users, labels,
 } from '../../db/schema';
-import type { TicketStatus, TicketPriority } from '../../types';
+import type { TicketStatus, TicketPriority, UserRole } from '../../types';
 
 export interface ListFilters {
   status?: TicketStatus[];
@@ -196,4 +196,196 @@ export async function createTicket(input: CreateTicketInput, userId: string) {
     assignees: assigneeRows.map(r => r.user),
     labels:    labelRows.map(r => r.label),
   };
+}
+
+// Tabla de transiciones válidas
+const VALID_TRANSITIONS: Record<TicketStatus, TicketStatus[]> = {
+  todo:        ['in_progress'],
+  in_progress: ['todo', 'review'],
+  review:      ['in_progress', 'done'],
+  done:        ['review'],
+};
+
+// Helper reutilizable: carga ticket con relaciones (sin filtrar archived_at)
+async function loadTicketWithRelations(id: string) {
+  const rows = await db
+    .select({
+      ticket:  tickets,
+      creator: { id: users.id, name: users.name, email: users.email, role: users.role },
+    })
+    .from(tickets)
+    .innerJoin(users, eq(tickets.created_by, users.id))
+    .where(eq(tickets.id, id));
+
+  if (!rows.length) return null;
+
+  const [assigneeRows, labelRows] = await Promise.all([
+    db
+      .select({ user: { id: users.id, name: users.name, email: users.email, role: users.role } })
+      .from(ticketAssignees)
+      .innerJoin(users, eq(ticketAssignees.user_id, users.id))
+      .where(eq(ticketAssignees.ticket_id, id)),
+    db
+      .select({ label: { id: labels.id, name: labels.name, color: labels.color } })
+      .from(ticketLabels)
+      .innerJoin(labels, eq(ticketLabels.label_id, labels.id))
+      .where(eq(ticketLabels.ticket_id, id)),
+  ]);
+
+  const { ticket, creator } = rows[0];
+  return {
+    ...ticket,
+    creator,
+    assignees: assigneeRows.map(r => r.user),
+    labels:    labelRows.map(r => r.label),
+  };
+}
+
+export async function getTicketById(id: string, role: UserRole) {
+  const ticket = await loadTicketWithRelations(id);
+
+  if (!ticket) {
+    throw apiError('Ticket not found', 404, 'not_found');
+  }
+  // Los members no pueden ver tickets archivados
+  if (ticket.archived_at && role !== 'admin') {
+    throw apiError('Ticket not found', 404, 'not_found');
+  }
+
+  return ticket;
+}
+
+async function replaceAssignees(ticketId: string, assigneeIds: string[]): Promise<void> {
+  await db.delete(ticketAssignees).where(eq(ticketAssignees.ticket_id, ticketId));
+  if (assigneeIds.length) {
+    await db.insert(ticketAssignees).values(assigneeIds.map(user_id => ({ ticket_id: ticketId, user_id })));
+  }
+}
+
+async function replaceLabels(ticketId: string, labelIds: string[]): Promise<void> {
+  await db.delete(ticketLabels).where(eq(ticketLabels.ticket_id, ticketId));
+  if (labelIds.length) {
+    await db.insert(ticketLabels).values(labelIds.map(label_id => ({ ticket_id: ticketId, label_id })));
+  }
+}
+
+export interface UpdateTicketInput {
+  title?:        string;
+  description?:  string | null;
+  priority?:     TicketPriority;
+  status?:       TicketStatus;
+  is_blocked?:   boolean;
+  assignee_ids?: string[];
+  label_ids?:    string[];
+  version:       number;
+}
+
+export async function updateTicket(
+  id: string,
+  input: UpdateTicketInput,
+  userId: string,
+  role: UserRole,
+) {
+  const [current] = await db
+    .select()
+    .from(tickets)
+    .where(and(eq(tickets.id, id), isNull(tickets.archived_at)));
+
+  if (!current) {
+    throw apiError('Ticket not found', 404, 'not_found');
+  }
+
+  if (role !== 'admin' && current.created_by !== userId) {
+    throw apiError('You can only edit your own tickets', 403, 'forbidden');
+  }
+
+  if (current.version !== input.version) {
+    throw apiError(
+      'Ticket was modified by another user — reload and retry',
+      409,
+      'version_conflict',
+    );
+  }
+
+  if (input.status && input.status !== current.status) {
+    const allowed = VALID_TRANSITIONS[current.status];
+    if (!allowed.includes(input.status)) {
+      throw apiError(
+        `Transition from "${current.status}" to "${input.status}" is not allowed`,
+        422,
+        'invalid_transition',
+      );
+    }
+    // Transición done → review solo para admin
+    if (current.status === 'done' && role !== 'admin') {
+      throw apiError('Only admins can move a ticket out of done', 403, 'forbidden');
+    }
+  }
+
+  // Verificar existencia de assignees y labels si se proporcionan
+  const [assigneeCheck, labelCheck] = await Promise.all([
+    input.assignee_ids?.length
+      ? db.select({ id: users.id }).from(users).where(inArray(users.id, input.assignee_ids))
+      : Promise.resolve([] as { id: string }[]),
+    input.label_ids?.length
+      ? db.select({ id: labels.id }).from(labels).where(inArray(labels.id, input.label_ids))
+      : Promise.resolve([] as { id: string }[]),
+  ]);
+
+  if (input.assignee_ids?.length && assigneeCheck.length !== input.assignee_ids.length) {
+    throw apiError('One or more assignee_ids not found', 400, 'invalid_input');
+  }
+  if (input.label_ids?.length && labelCheck.length !== input.label_ids.length) {
+    throw apiError('One or more label_ids not found', 400, 'invalid_input');
+  }
+
+  const now = new Date().toISOString();
+
+  await db
+    .update(tickets)
+    .set({
+      ...(input.title       !== undefined && { title:       input.title }),
+      ...(input.description !== undefined && { description: input.description }),
+      ...(input.priority    !== undefined && { priority:    input.priority }),
+      ...(input.status      !== undefined && { status:      input.status }),
+      ...(input.is_blocked  !== undefined && { is_blocked:  input.is_blocked }),
+      version:    current.version + 1,
+      updated_at: now,
+    })
+    .where(eq(tickets.id, id));
+
+  // Reemplazar relaciones solo si se enviaron explícitamente
+  await Promise.all([
+    input.assignee_ids !== undefined
+      ? replaceAssignees(id, input.assignee_ids)
+      : Promise.resolve(),
+    input.label_ids !== undefined
+      ? replaceLabels(id, input.label_ids)
+      : Promise.resolve(),
+  ]);
+
+  return loadTicketWithRelations(id);
+}
+
+export async function archiveTicket(id: string, userId: string, role: UserRole) {
+  const [current] = await db
+    .select()
+    .from(tickets)
+    .where(and(eq(tickets.id, id), isNull(tickets.archived_at)));
+
+  if (!current) {
+    throw apiError('Ticket not found', 404, 'not_found');
+  }
+
+  if (role !== 'admin' && current.created_by !== userId) {
+    throw apiError('You can only archive your own tickets', 403, 'forbidden');
+  }
+
+  const now = new Date().toISOString();
+  await db
+    .update(tickets)
+    .set({ archived_at: now, updated_at: now })
+    .where(eq(tickets.id, id));
+
+  return loadTicketWithRelations(id);
 }

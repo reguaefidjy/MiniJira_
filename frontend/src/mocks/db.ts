@@ -1,4 +1,4 @@
-import type { Comment, Ticket, User } from '@/types'
+import type { Comment, Label, Ticket, User } from '@/types'
 
 export const USERS: User[] = [
   {
@@ -31,6 +31,16 @@ const laura = USERS[0]
 const marcos = USERS[1]
 const sofia = USERS[2]
 
+export const LABELS: Record<string, Label> = {
+  auth:        { id: 'l1', name: 'auth',        color: '#005bbf' },
+  backend:     { id: 'l2', name: 'backend',     color: '#0050a8' },
+  frontend:    { id: 'l3', name: 'frontend',    color: '#00452d' },
+  ui:          { id: 'l4', name: 'ui',          color: '#003d84' },
+  api:         { id: 'l5', name: 'api',         color: '#acb3b8' },
+  concurrencia:{ id: 'l6', name: 'concurrencia',color: '#752121' },
+  metricas:    { id: 'l7', name: 'métricas',    color: '#005bbf' },
+}
+
 export const TICKETS: Ticket[] = [
   {
     id: 'b2000000-0000-0000-0000-000000000001',
@@ -44,12 +54,12 @@ export const TICKETS: Ticket[] = [
     is_blocked: false,
     version: 1,
     created_by: laura.id,
-    created_by_user: laura,
+    creator: laura,
     archived_at: null,
     created_at: '2026-04-10T10:00:00Z',
     updated_at: '2026-04-10T10:00:00Z',
     assignees: [marcos],
-    labels: ['auth', 'backend'],
+    labels: [LABELS.auth, LABELS.backend],
   },
   {
     id: 'b2000000-0000-0000-0000-000000000002',
@@ -63,12 +73,12 @@ export const TICKETS: Ticket[] = [
     is_blocked: false,
     version: 3,
     created_by: marcos.id,
-    created_by_user: marcos,
+    creator: marcos,
     archived_at: null,
     created_at: '2026-04-11T08:30:00Z',
     updated_at: '2026-04-14T16:00:00Z',
     assignees: [marcos, sofia],
-    labels: ['frontend', 'ui'],
+    labels: [LABELS.frontend, LABELS.ui],
   },
   {
     id: 'b2000000-0000-0000-0000-000000000003',
@@ -82,12 +92,12 @@ export const TICKETS: Ticket[] = [
     is_blocked: true,
     version: 2,
     created_by: marcos.id,
-    created_by_user: marcos,
+    creator: marcos,
     archived_at: null,
     created_at: '2026-04-12T09:00:00Z',
     updated_at: '2026-04-15T11:30:00Z',
     assignees: [marcos],
-    labels: ['backend', 'api', 'concurrencia'],
+    labels: [LABELS.backend, LABELS.api, LABELS.concurrencia],
   },
   {
     id: 'b2000000-0000-0000-0000-000000000004',
@@ -101,12 +111,12 @@ export const TICKETS: Ticket[] = [
     is_blocked: false,
     version: 4,
     created_by: sofia.id,
-    created_by_user: sofia,
+    creator: sofia,
     archived_at: null,
     created_at: '2026-04-13T10:15:00Z',
     updated_at: '2026-04-17T09:45:00Z',
     assignees: [sofia],
-    labels: ['frontend', 'métricas'],
+    labels: [LABELS.frontend, LABELS.metricas],
   },
   {
     id: 'b2000000-0000-0000-0000-000000000005',
@@ -120,12 +130,12 @@ export const TICKETS: Ticket[] = [
     is_blocked: false,
     version: 5,
     created_by: laura.id,
-    created_by_user: laura,
+    creator: laura,
     archived_at: null,
     created_at: '2026-04-14T11:00:00Z',
     updated_at: '2026-04-18T17:00:00Z',
     assignees: [sofia],
-    labels: ['backend', 'métricas'],
+    labels: [LABELS.backend, LABELS.metricas],
   },
 ]
 

@@ -17,7 +17,16 @@
       "Bash(pnpm install *)",
       "Bash(pnpm approve-builds *)",
       "Bash(pnpm db:generate)",
-      "Bash(pnpm db:migrate)"
+      "Bash(pnpm db:migrate)",
+      "Bash(bash --norc -n seed.sh)",
+      "Bash(bash seed.sh --dry-run)",
+      "Bash(bash --norc -n scripts/seed.sh)",
+      "Bash(bash --norc -n scripts/setup-dev.sh)",
+      "Bash(bash --norc -n scripts/cleanup.sh)",
+      "Bash(chmod +x scripts/*.sh)",
+      "Bash(bash scripts/seed.sh --dry-run)",
+      "Bash(bash *)",
+      "Bash(npx tsc *)"
     ]
   }
 }

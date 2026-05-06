@@ -7,8 +7,7 @@ export function useArchiveTicket() {
   const setActiveTicketId = useAppStore((s) => s.setActiveTicketId)
 
   return useMutation({
-    mutationFn: ({ id, version }: { id: string; version: number }) =>
-      archiveTicket(id, version),
+    mutationFn: (id: string) => archiveTicket(id),
     onSuccess: () => {
       setActiveTicketId(null)
       queryClient.invalidateQueries({ queryKey: ['tickets'] })

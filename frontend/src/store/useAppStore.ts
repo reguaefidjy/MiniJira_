@@ -25,6 +25,9 @@ interface AppStore {
   activeTicketId: string | null
   setActiveTicketId: (id: string | null) => void
 
+  createModalOpen: boolean
+  setCreateModalOpen: (open: boolean) => void
+
   conflictPayload: TicketFormValues | null
   setConflictPayload: (payload: TicketFormValues | null) => void
 
@@ -42,6 +45,9 @@ export const useAppStore = create<AppStore>((set) => ({
 
   activeTicketId: null,
   setActiveTicketId: (id) => set({ activeTicketId: id }),
+
+  createModalOpen: false,
+  setCreateModalOpen: (open) => set({ createModalOpen: open }),
 
   conflictPayload: null,
   setConflictPayload: (payload) => set({ conflictPayload: payload }),

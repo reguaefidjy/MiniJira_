@@ -43,7 +43,7 @@ export function TicketDrawer({ ticketId, onClose }: Props) {
         status: ticket.status,
         is_blocked: ticket.is_blocked,
         assignee_ids: ticket.assignees.map((u) => u.id),
-        labels: ticket.labels,
+        label_ids: ticket.labels.map((l) => l.id),
         version: ticket.version,
       })
     }
@@ -60,7 +60,7 @@ export function TicketDrawer({ ticketId, onClose }: Props) {
 
   function handleArchive() {
     if (!ticket) return
-    archiveTicket({ id: ticket.id, version: ticket.version })
+    archiveTicket(ticket.id)
   }
 
   return (
@@ -162,13 +162,13 @@ export function TicketDrawer({ ticketId, onClose }: Props) {
                   <div className="flex items-start gap-2">
                     <span className="w-20 text-xs text-[#acb3b8]">Etiquetas</span>
                     <div className="flex flex-wrap gap-1">
-                      {ticket.labels.map((l) => <LabelTag key={l} label={l} />)}
+                      {ticket.labels.map((l) => <LabelTag key={l.id} label={l} />)}
                     </div>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
                   <span className="w-20 text-xs text-[#acb3b8]">Creado por</span>
-                  <span className="text-xs text-[#0c0e10]">{ticket.created_by_user.name}</span>
+                  <span className="text-xs text-[#0c0e10]">{ticket.creator.name}</span>
                 </div>
                 <DateDisplay date={ticket.created_at} label="Creado" />
                 <DateDisplay date={ticket.updated_at} label="Actualizado" />

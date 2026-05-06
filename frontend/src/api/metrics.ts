@@ -15,3 +15,9 @@ export async function fetchMetrics(filters: MetricsFilters): Promise<MetricsSnap
   if (!res.ok) throw new Error('Failed to fetch metrics')
   return res.json()
 }
+
+/** Devuelve la URL lista para pasarla a window.location.href y disparar la descarga. */
+export function getMetricsExportUrl(filters: MetricsFilters): string {
+  const qs = buildMetricsParams(filters)
+  return `/api/metrics/export?${qs}`
+}

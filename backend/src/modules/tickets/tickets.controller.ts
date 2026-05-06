@@ -90,6 +90,11 @@ export const create: RequestHandler = async (req, res, next) => {
       }
     }
 
+    if (!req.user) {
+      res.status(401).json({ error: 'unauthorized', message: 'Authentication required' });
+      return;
+    }
+
     const ticket = await service.createTicket(
       {
         title:        b.title.trim(),
@@ -100,7 +105,7 @@ export const create: RequestHandler = async (req, res, next) => {
         assignee_ids: b.assignee_ids as string[] | undefined,
         label_ids:    b.label_ids    as string[] | undefined,
       },
-      req.user!.sub,
+      req.user.sub,
     );
 
     res.status(201).json(ticket);
@@ -109,6 +114,98 @@ export const create: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const getOne:  RequestHandler = async (_req, _res, next) => next();
-export const update:  RequestHandler = async (_req, _res, next) => next();
-export const archive: RequestHandler = async (_req, _res, next) => next();
+export const getOne: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'unauthorized', message: 'Authentication required' });
+      return;
+    }
+
+    const ticket = await service.getTicketById(req.params['id'] as string, req.user.role);
+    res.json(ticket);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const update: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'unauthorized', message: 'Authentication required' });
+      return;
+    }
+
+    const b = req.body as Record<string, unknown>;
+
+    if (b.version === undefined || typeof b.version !== 'number' || !Number.isInteger(b.version)) {
+      return next(validationError('version is required and must be an integer'));
+    }
+    if (b.title !== undefined) {
+      if (typeof b.title !== 'string' || !b.title.trim()) {
+        return next(validationError('title must be a non-empty string'));
+      }
+      if ((b.title as string).trim().length > 120) {
+        return next(validationError('title must not exceed 120 characters'));
+      }
+    }
+    if (b.description !== undefined && b.description !== null && typeof b.description !== 'string') {
+      return next(validationError('description must be a string or null'));
+    }
+    if (typeof b.description === 'string' && b.description.length > 10_000) {
+      return next(validationError('description must not exceed 10,000 characters'));
+    }
+    if (b.priority !== undefined && !VALID_PRIORITIES.has(b.priority as string)) {
+      return next(validationError('priority must be low | medium | high'));
+    }
+    if (b.status !== undefined && !VALID_STATUSES.has(b.status as string)) {
+      return next(validationError('status must be todo | in_progress | review | done'));
+    }
+    if (b.is_blocked !== undefined && typeof b.is_blocked !== 'boolean') {
+      return next(validationError('is_blocked must be a boolean'));
+    }
+    if (b.assignee_ids !== undefined) {
+      if (!Array.isArray(b.assignee_ids) || b.assignee_ids.some(id => typeof id !== 'string' || !UUID_RE.test(id))) {
+        return next(validationError('assignee_ids must be an array of UUIDs'));
+      }
+    }
+    if (b.label_ids !== undefined) {
+      if (!Array.isArray(b.label_ids) || b.label_ids.some(id => typeof id !== 'string' || !UUID_RE.test(id))) {
+        return next(validationError('label_ids must be an array of UUIDs'));
+      }
+    }
+
+    const ticket = await service.updateTicket(
+      req.params['id'] as string,
+      {
+        title:        b.title        !== undefined ? (b.title as string).trim() : undefined,
+        description:  b.description  as string | null | undefined,
+        priority:     b.priority     as TicketPriority | undefined,
+        status:       b.status       as TicketStatus   | undefined,
+        is_blocked:   b.is_blocked   as boolean | undefined,
+        assignee_ids: b.assignee_ids as string[] | undefined,
+        label_ids:    b.label_ids    as string[] | undefined,
+        version:      b.version      as number,
+      },
+      req.user.sub,
+      req.user.role,
+    );
+
+    res.json(ticket);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const archive: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: 'unauthorized', message: 'Authentication required' });
+      return;
+    }
+
+    const ticket = await service.archiveTicket(req.params['id'] as string, req.user.sub, req.user.role);
+    res.json(ticket);
+  } catch (err) {
+    next(err);
+  }
+};

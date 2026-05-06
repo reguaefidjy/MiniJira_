@@ -11,8 +11,12 @@ export function AuthCallbackPage() {
     if (called.current) return
     called.current = true
 
-    const code = params.get('code')
-    if (!code) {
+    const code       = params.get('code')
+    const state      = params.get('state')
+    const savedState = sessionStorage.getItem('oauth_state')
+    sessionStorage.removeItem('oauth_state')
+
+    if (!code || !state || state !== savedState) {
       navigate('/login', { replace: true })
       return
     }

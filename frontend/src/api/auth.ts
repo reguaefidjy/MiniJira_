@@ -16,6 +16,11 @@ export async function postAuthCallback(code: string): Promise<void> {
   if (!res.ok) throw new Error('Auth callback failed')
 }
 
+export async function postAuthRefresh(): Promise<void> {
+  const res = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' })
+  if (!res.ok) throw new Error('Refresh failed')
+}
+
 export async function postLogout(): Promise<void> {
   await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
 }

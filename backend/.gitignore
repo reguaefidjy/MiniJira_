@@ -1,0 +1,13 @@
+node_modules/
+dist/
+
+# Base de datos SQLite — nunca incluir en el repositorio
+*.db
+*.sqlite
+minijira.db
+
+# Variables de entorno con secretos
+.env
+
+# Drizzle journal (generado automáticamente)
+drizzle/meta/

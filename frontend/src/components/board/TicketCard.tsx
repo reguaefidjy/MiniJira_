@@ -44,9 +44,11 @@ export function TicketCard({ ticket, index, onClick }: Props) {
             ) : (
               <PriorityBadge priority={ticket.priority} />
             )}
-            <span className="text-[0.6875rem] uppercase tracking-[0.05em] text-[#acb3b8]">
-              {ticket.short_id}
-            </span>
+            {ticket.short_id && (
+              <span className="text-[0.6875rem] uppercase tracking-[0.05em] text-[#acb3b8]">
+                {ticket.short_id}
+              </span>
+            )}
           </div>
 
           {/* Title */}
@@ -62,7 +64,7 @@ export function TicketCard({ ticket, index, onClick }: Props) {
           {ticket.labels.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1">
               {ticket.labels.map((l) => (
-                <LabelTag key={l} label={l} />
+                <LabelTag key={l.id} label={l} />
               ))}
             </div>
           )}
@@ -74,7 +76,7 @@ export function TicketCard({ ticket, index, onClick }: Props) {
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3l3 3 3-3h3a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1Z" />
               </svg>
-              {ticket.comment_count}
+              {ticket.comment_count ?? 0}
             </span>
 
             {/* Link icon (placeholder) */}

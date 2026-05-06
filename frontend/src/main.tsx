@@ -4,10 +4,12 @@ import './index.css'
 import { App } from './App'
 
 async function prepare() {
-  if (import.meta.env.DEV) {
-    const { worker } = await import('./mocks/browser')
-    await worker.start({ onUnhandledRequest: 'bypass' })
-  }
+  // MSW desactivado: el frontend apunta al backend real vía proxy de Vite
+  // Para reactivar mocks: descomentar las líneas siguientes
+  // if (import.meta.env.DEV) {
+  //   const { worker } = await import('./mocks/browser')
+  //   await worker.start({ onUnhandledRequest: 'bypass' })
+  // }
 }
 
 prepare().then(() => {

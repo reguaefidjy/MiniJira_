@@ -56,12 +56,10 @@ export async function updateTicket(
   return res.json()
 }
 
-export async function archiveTicket(id: string, version: number): Promise<void> {
+export async function archiveTicket(id: string): Promise<void> {
   const res = await fetch(`/api/tickets/${id}/archive`, {
     method: 'PATCH',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ version }),
   })
   if (!res.ok) throw new Error('Failed to archive ticket')
 }

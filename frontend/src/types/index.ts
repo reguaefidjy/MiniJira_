@@ -13,7 +13,7 @@ export interface User {
 
 export interface Ticket {
   id: string
-  short_id: string
+  short_id?: string
   title: string
   description: string | null
   status: TicketStatus
@@ -25,9 +25,17 @@ export interface Ticket {
   created_at: string
   updated_at: string
   assignees: User[]
-  labels: string[]
-  created_by_user: User
-  comment_count: number
+  labels: Label[]
+  creator: { id: string; name: string; email: string; role: string }
+  comment_count?: number
+}
+
+export interface Label {
+  id: string
+  name: string
+  color: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Comment {
@@ -70,7 +78,7 @@ export interface TicketFormValues {
   status: TicketStatus
   is_blocked: boolean
   assignee_ids: string[]
-  labels: string[]
+  label_ids: string[]
   version: number
 }
 
